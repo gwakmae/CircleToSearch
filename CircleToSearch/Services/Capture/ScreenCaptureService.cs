@@ -1,52 +1,48 @@
 using CircleToSearch.Wpf.Core.WinApi;
 using CircleToSearch.Wpf.Services.Abstractions;
+using System;
 using System.Drawing;
+using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
-using System.Windows; // Int32Rect¸¦ À§ÇØ ÇÊ¿äÇÕ´Ï´Ù.
 
-namespace CircleToSearch.Wpf.Services.Capture;
-
-public class ScreenCaptureService : IScreenCaptureService
+namespace CircleToSearch.Wpf.Services.Capture
 {
-    public BitmapSource? CaptureScreen(Rectangle region)
+    public class ScreenCaptureService : IScreenCaptureService
     {
-        // ÀüÃ¼ È­¸éÀÇ µð¹ÙÀÌ½º ÄÁÅØ½ºÆ®(DC)¸¦ °¡Á®¿É´Ï´Ù.
-        IntPtr screenDc = GetDC(IntPtr.Zero);
-        // È­¸é DC¿Í È£È¯µÇ´Â ¸Þ¸ð¸® DC¸¦ »ý¼ºÇÕ´Ï´Ù.
-        IntPtr memDc = NativeMethods.CreateCompatibleDC(screenDc);
-        // ÁöÁ¤µÈ ¿µ¿ª Å©±âÀÇ ºñÆ®¸ÊÀ» »ý¼ºÇÕ´Ï´Ù.
-        IntPtr hBitmap = NativeMethods.CreateCompatibleBitmap(screenDc, region.Width, region.Height);
-        // »ý¼ºµÈ ºñÆ®¸ÊÀ» ¸Þ¸ð¸® DC¿¡ ¼±ÅÃÇÏ¿© ±×¸²À» ±×¸± ÁØºñ¸¦ ÇÕ´Ï´Ù.
-        IntPtr hOldBitmap = NativeMethods.SelectObject(memDc, hBitmap);
+        public BitmapSource? CaptureScreen(Rectangle region)
+        {
+            if (region.Width <= 0 || region.Height <= 0)
+                return null;
 
-        // È­¸é DCÀÇ ÁöÁ¤µÈ ¿µ¿ªÀ» ¸Þ¸ð¸® DC·Î º¹»çÇÕ´Ï´Ù (BitBlt).
-        NativeMethods.BitBlt(memDc, 0, 0, region.Width, region.Height, screenDc, region.X, region.Y, NativeMethods.SRCCOPY);
+            IntPtr screenDc = GetDC(IntPtr.Zero);
+            IntPtr memDc = NativeMethods.CreateCompatibleDC(screenDc);
+            IntPtr hBitmap = NativeMethods.CreateCompatibleBitmap(screenDc, region.Width, region.Height);
+            IntPtr hOld = NativeMethods.SelectObject(memDc, hBitmap);
 
-        // ºñÆ®¸ÊÀ» ´Ù½Ã ¿ø·¡´ë·Î µÇµ¹¸³´Ï´Ù.
-        NativeMethods.SelectObject(memDc, hOldBitmap);
+            try
+            {
+                NativeMethods.BitBlt(memDc, 0, 0, region.Width, region.Height,
+                                     screenDc, region.X, region.Y, NativeMethods.SRCCOPY);
 
-        // »ç¿ëÇÑ DC¿Í ºñÆ®¸Ê ÇÚµéÀ» Á¤¸®ÇÕ´Ï´Ù.
-        NativeMethods.DeleteDC(memDc);
-        ReleaseDC(IntPtr.Zero, screenDc);
+                var bmp = Imaging.CreateBitmapSourceFromHBitmap(
+                    hBitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 
-        // GDI ºñÆ®¸Ê ÇÚµé(HBITMAP)À» WPF¿¡¼­ »ç¿ëÇÒ ¼ö ÀÖ´Â BitmapSource·Î º¯È¯ÇÕ´Ï´Ù.
-        BitmapSource? bitmapSource = Imaging.CreateBitmapSourceFromHBitmap(
-            hBitmap,
-            IntPtr.Zero,
-            Int32Rect.Empty, // <--- ¼öÁ¤µÈ ºÎºÐ
-            BitmapSizeOptions.FromEmptyOptions());
+                // ì„ íƒ: Freeze í•´ì„œ UI ìŠ¤ë ˆë“œ ì™¸ ì‚¬ìš© ê°€ëŠ¥
+                if (bmp.CanFreeze) bmp.Freeze();
+                return bmp;
+            }
+            finally
+            {
+                NativeMethods.SelectObject(memDc, hOld);
+                NativeMethods.DeleteObject(hBitmap);
+                NativeMethods.DeleteDC(memDc);
+                ReleaseDC(IntPtr.Zero, screenDc);
+            }
+        }
 
-        // GDI ºñÆ®¸Ê °´Ã¼¸¦ »èÁ¦ÇÏ¿© ¸Þ¸ð¸® ´©¼ö¸¦ ¹æÁöÇÕ´Ï´Ù.
-        NativeMethods.DeleteObject(hBitmap);
-
-        return bitmapSource;
+        [DllImport("user32.dll")] private static extern IntPtr GetDC(IntPtr hWnd);
+        [DllImport("user32.dll")] private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
     }
-
-    // GetDC¿Í ReleaseDC´Â user32.dll¿¡ ÀÖÀ¸¹Ç·Î, WinApi Æú´õ¿¡ Ãß°¡ÇØµµ ÁÁ½À´Ï´Ù.
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
 }

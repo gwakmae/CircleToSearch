@@ -1,6 +1,4 @@
 using CircleToSearch.Wpf.Services.Abstractions;
-using System.Windows;
-using System.Windows.Interop; // HwndSource¸¦ À§ÇØ Ãß°¡
 
 namespace CircleToSearch.Wpf.Orchestration
 {
@@ -34,24 +32,14 @@ namespace CircleToSearch.Wpf.Orchestration
             var selectionArea = _viewManager.ShowOverlayAndGetSelection();
             if (selectionArea is null) return;
 
-            var source = new HwndSource(new HwndSourceParameters());
-            var dpiScale = source.CompositionTarget.TransformToDevice;
-            source.Dispose();
+            // ë°”ë¡œ PixelRect ì‚¬ìš©
+            var pixelRect = selectionArea.Value.PixelRect;
 
-            var pixelRect = new System.Drawing.Rectangle(
-                (int)(selectionArea.Value.Bounds.Left * dpiScale.M11),
-                (int)(selectionArea.Value.Bounds.Top * dpiScale.M22),
-                (int)(selectionArea.Value.Bounds.Width * dpiScale.M11),
-                (int)(selectionArea.Value.Bounds.Height * dpiScale.M22)
-            );
-
-            // ³Êºñ³ª ³ôÀÌ°¡ 0ÀÌ¸é Ä¸Ã³ÇÏÁö ¾ÊÀ½
             if (pixelRect.Width <= 0 || pixelRect.Height <= 0) return;
 
             var capturedImage = _screenCaptureService.CaptureScreen(pixelRect);
             if (capturedImage is null) return;
 
-            // º¯°æ: ÀÌ¹ÌÁö Ã³¸® ¼­ºñ½º È£Ãâ ½Ã °æ·Î¿Í °æ°è Á¤º¸µµ ÇÔ²² Àü´Þ
             var base64String = _imageProcessorService.ProcessAndEncodeAsBase64(
                 capturedImage,
                 selectionArea.Value.PathPoints,

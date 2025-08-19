@@ -1,10 +1,18 @@
+using System.Drawing; // Rectangle
 using System.Windows;
-using System.Windows.Media; // PointCollection을 위해 추가
+using System.Windows.Media;
 
 namespace CircleToSearch.Wpf.Models
 {
     /// <summary>
-    /// 사용자가 화면에서 선택한 영역의 정보 (경계 사각형과 실제 경로)를 담습니다.
+    /// 사용자가 선택한 영역:
+    /// Bounds (DIP 단위, 선택 경로의 경계),
+    /// PathPoints (그린 자유곡선),
+    /// PixelRect (전역 화면 좌표의 픽셀 단위 사각형)
     /// </summary>
-    public readonly record struct SelectionArea(Rect Bounds, PointCollection PathPoints);
+    public readonly record struct SelectionArea(
+        Rect Bounds,
+        PointCollection PathPoints,
+        Rectangle PixelRect
+    );
 }

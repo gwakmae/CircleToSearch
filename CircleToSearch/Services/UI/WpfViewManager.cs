@@ -1,7 +1,7 @@
+using CircleToSearch.Wpf.Core.Display;
 using CircleToSearch.Wpf.Models;
 using CircleToSearch.Wpf.Services.Abstractions;
 using CircleToSearch.Wpf.Views;
-using System.Threading.Tasks;
 
 namespace CircleToSearch.Wpf.Services.UI
 {
@@ -11,16 +11,13 @@ namespace CircleToSearch.Wpf.Services.UI
 
         public SelectionArea? ShowOverlayAndGetSelection()
         {
-            // --- ÀÌ ºÎºÐÀ» ¼öÁ¤ÇÏ¼¼¿ä ---
-            // var overlay = new ScreenOverlay_final_Window(); -> var overlay = new ScreenOverlayWindow();
-            var overlay = new ScreenOverlayWindow();
-            // -------------------------
-            bool? result = overlay.ShowDialog();
+            // ì»¤ì„œ ì•„ëž˜ ëª¨ë‹ˆí„° íšë“
+            var monitor = MonitorHelper.GetMonitorUnderCursorOrPrimary();
 
-            if (result == true)
-            {
-                return overlay.SelectedArea;
-            }
+            var overlay = new MonitorOverlayWindow(monitor);
+            bool? dlg = overlay.ShowDialog();
+            if (dlg == true && overlay.Result.HasValue)
+                return overlay.Result.Value;
             return null;
         }
 
@@ -29,7 +26,7 @@ namespace CircleToSearch.Wpf.Services.UI
             if (_mainWindow == null)
             {
                 _mainWindow = new MainWindow();
-                _mainWindow.Closed += (sender, args) => _mainWindow = null;
+                _mainWindow.Closed += (_, __) => _mainWindow = null;
                 _mainWindow.Show();
             }
             else
@@ -40,9 +37,8 @@ namespace CircleToSearch.Wpf.Services.UI
             if (!string.IsNullOrEmpty(base64ImageData))
             {
                 if (!_mainWindow.IsLoaded)
-                {
                     await Task.Delay(100);
-                }
+
                 await _mainWindow.SearchWithImage(base64ImageData);
             }
         }

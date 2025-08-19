@@ -1,3 +1,5 @@
+// File: C:\Users\Public\Documents\C#_Code\CircleToSearch\CircleToSearch\Views\MainWindow.xaml.cs
+
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.IO;
@@ -34,8 +36,7 @@ namespace CircleToSearch.Wpf.Views
                 var coreWebView = WebView.CoreWebView2;
                 if (coreWebView is null)
                 {
-                    // --- 수정된 부분 ---
-                    System.Windows.MessageBox.Show("WebView2를 초기화할 수 없습니다.");
+                    System.Windows.MessageBox.Show("Failed to initialize WebView2.");
                     return;
                 }
 
@@ -55,20 +56,22 @@ namespace CircleToSearch.Wpf.Views
 
                 if (navigationSucceeded)
                 {
-                    string scriptToInject = await File.ReadAllTextAsync("Assets/Scripts/lens_interop.js");
+                    // script 경로를 실행 디렉터리 기준으로 안전하게 조합
+                    string scriptPath = System.IO.Path.Combine(
+                        AppContext.BaseDirectory, "Assets", "Scripts", "lens_interop.js");
+
+                    string scriptToInject = await File.ReadAllTextAsync(scriptPath);
                     string scriptToExecute = $"{scriptToInject}; uploadImageFromBase64('{base64ImageData}');";
                     await coreWebView.ExecuteScriptAsync(scriptToExecute);
                 }
                 else
                 {
-                    // --- 수정된 부분 ---
-                    System.Windows.MessageBox.Show("Google Lens 페이지를 여는 데 실패했습니다.");
+                    System.Windows.MessageBox.Show("Failed to open the Google Lens page.");
                 }
             }
             catch (Exception ex)
             {
-                // --- 수정된 부분 ---
-                System.Windows.MessageBox.Show($"오류가 발생했습니다: {ex.Message}");
+                System.Windows.MessageBox.Show($"An error occurred: {ex.Message}");
             }
         }
     }
